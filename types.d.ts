@@ -1,0 +1,1 @@
+declare module '@fortune-inc/tw-voucher';

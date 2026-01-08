@@ -1,0 +1,125 @@
+
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum TopUpStatus {
+  PENDING   // รอตรวจสอบ
+  APPROVED  // อนุมัติแล้ว
+  REJECTED  // ปฏิเสธ
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  username  String
+  password  String
+  role          Role      @default(USER)
+  topupRequests TopUpRequest[]
+  createdAt DateTime @default(now())
+  novels    Novel[]
+  comments  Comment[]
+  bookmarks Bookmark[]
+  likes     Like[]
+  image     String?
+  coins     Int      @default(0)
+  unlockedChapters ChapterAccess[]
+}
+
+model TopUpRequest {
+  id          Int      @id @default(autoincrement())
+  amount      Float
+  proofImage  String   // เก็บ path รูปสลิป
+  status      TopUpStatus @default(PENDING)
+  
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Novel {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?  @db.Text
+  coverImage  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  chapters    Chapter[]
+  comments  Comment[]
+  bookmarks Bookmark[]
+  likes     Like[]
+  viewCount   Int       @default(0)
+  authorId    Int?
+  author      User?    @relation(fields: [authorId], references: [id])
+}
+
+model Chapter {
+  id        Int      @id @default(autoincrement())
+  title     String
+  content   String   @db.LongText
+  order     Int
+  novelId   Int
+  novel     Novel    @relation(fields: [novelId], references: [id])
+  createdAt DateTime @default(now())
+  viewCount Int      @default(0)
+  @@unique([novelId, order])
+  price     Int      @default(0)
+  accesses  ChapterAccess[]
+}
+
+model ChapterAccess {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  chapterId Int
+  user      User     @relation(fields: [userId], references: [id])
+  chapter   Chapter  @relation(fields: [chapterId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([userId, chapterId]) // กันซื้อซ้ำ
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  
+  novelId   Int
+  novel     Novel    @relation(fields: [novelId], references: [id])
+}
+
+model Bookmark {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  novelId   Int
+  novel     Novel    @relation(fields: [novelId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([userId, novelId]) // 1 คน เก็บเข้าชั้นได้แค่ 1 ครั้งต่อเรื่อง
+}
+
+model Like {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  novelId   Int
+  novel     Novel    @relation(fields: [novelId], references: [id])
+
+  @@unique([userId, novelId]) // 1 คน กดไลก์ได้แค่ 1 ครั้งต่อเรื่อง
+}
